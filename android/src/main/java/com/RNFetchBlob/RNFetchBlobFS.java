@@ -24,6 +24,9 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetEncoder;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -555,6 +558,57 @@ class RNFetchBlobFS {
         promise.resolve(true);
     }
 
+    public static void copyPathToAnotherPath(String path, String dest)
+            throws IOException {
+        InputStream in = null;
+        OutputStream out = null;
+        File sourceLocation = new File(path);
+        File targetLocation = new File(dest);
+        try{
+            // assets 里面的目录暂时不支持copy
+            if (!path.startsWith(RNFetchBlobConst.FILE_PREFIX_BUNDLE_ASSET) && sourceLocation.isDirectory()) {
+                if (!targetLocation.exists()) {
+                    targetLocation.mkdir();
+                }
+
+                String[] children = sourceLocation.list();
+                for (int i = 0; i < sourceLocation.listFiles().length; i++) {
+                    copyPathToAnotherPath(sourceLocation.getPath() + "/" + children[i],
+                            targetLocation.getPath() + "/"+ children[i]);
+                }
+            } else {
+                if(!new File(dest).exists()) {
+                    boolean result = new File(dest).createNewFile();
+                    if (!result) {
+                        throw new IllegalArgumentException("Destination file at '" + dest + "' already exists");
+                    }
+                }
+
+                in = inputStreamFromPath(path);
+
+                out = new FileOutputStream(targetLocation);
+
+                // Copy the bits from instream to outstream
+                byte[] buf = new byte[10240];
+                int len;
+                while ((len = in.read(buf)) > 0) {
+                    out.write(buf, 0, len);
+                }
+
+            }
+        }catch (Exception err){
+            throw err;
+        }finally {
+            if (in != null) {
+                in.close();
+            }
+            if (out != null) {
+                out.close();
+            }
+        }
+
+    }
+
     /**
      * Copy file to destination path
      * @param path Source path
@@ -563,8 +617,7 @@ class RNFetchBlobFS {
      */
     static void cp(String path, String dest, Callback callback) {
         path = normalizePath(path);
-        InputStream in = null;
-        OutputStream out = null;
+
         String message = "";
 
         try {
@@ -572,35 +625,10 @@ class RNFetchBlobFS {
                 callback.invoke("Source file at path`" + path + "` does not exist");
                 return;
             }
-            if(!new File(dest).exists()) {
-                boolean result = new File(dest).createNewFile();
-                if (!result) {
-                    callback.invoke("Destination file at '" + dest + "' already exists");
-                    return;
-                }
-            }
 
-            in = inputStreamFromPath(path);
-            out = new FileOutputStream(dest);
-
-            byte[] buf = new byte[10240];
-            int len;
-            while ((len = in.read(buf)) > 0) {
-                out.write(buf, 0, len);
-            }
+            copyPathToAnotherPath(path, dest);
         } catch (Exception err) {
             message += err.getLocalizedMessage();
-        } finally {
-            try {
-                if (in != null) {
-                    in.close();
-                }
-                if (out != null) {
-                    out.close();
-                }
-            } catch (Exception e) {
-                message += e.getLocalizedMessage();
-            }
         }
         // Only call the callback once to prevent the app from crashing
         // with an 'Illegal callback invocation from native module' exception.
