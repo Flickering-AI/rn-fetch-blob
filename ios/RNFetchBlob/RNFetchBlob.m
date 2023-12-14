@@ -478,9 +478,18 @@ RCT_EXPORT_METHOD(mv:(NSString *)path toPath:(NSString *)dest callback:(RCTRespo
     // start
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSURL *destURL = [NSURL fileURLWithPath:dest];
+    NSURL *sourceURL = [NSURL fileURLWithPath:path];
     if ([fileManager fileExistsAtPath:[destURL path]]) {
+        NSError *replaceError = nil;
+        [fileManager replaceItemAtURL:destURL withItemAtURL:sourceURL backupItemName:nil options:NSFileManagerItemReplacementUsingNewMetadataOnly resultingItemURL:nil error:&replaceError];
+        if (!replaceError) {
+            callback(@[[NSNull null], @YES]);
+            return;
+        }else{
+            NSLog(@"无法替换文件: %@", [replaceError localizedDescription]);
+        }
+        // 如果replace失败, 则删除该文件/目录
         NSError *removeError = nil;
-        // 如果存在, 则删除该文件/目录
         [fileManager removeItemAtURL:destURL error:&removeError];
         if (removeError) {
             NSLog(@"无法移除文件: %@", [removeError localizedDescription]);
@@ -490,7 +499,6 @@ RCT_EXPORT_METHOD(mv:(NSString *)path toPath:(NSString *)dest callback:(RCTRespo
     }
 
     NSError *moveError = nil;
-    NSURL *sourceURL = [NSURL fileURLWithPath:path];
     [fileManager moveItemAtURL:sourceURL toURL:destURL error:&moveError];
     if (moveError) {
         NSLog(@"无法移动文件: %@", [moveError localizedDescription]);
