@@ -474,13 +474,39 @@ RCT_EXPORT_METHOD(cp:(NSString*)src toPath:(NSString *)dest callback:(RCTRespons
 #pragma mark - fs.mv
 RCT_EXPORT_METHOD(mv:(NSString *)path toPath:(NSString *)dest callback:(RCTResponseSenderBlock) callback)
 {
-    NSError * error = nil;
-    BOOL result = [[NSFileManager defaultManager] moveItemAtURL:[NSURL fileURLWithPath:path] toURL:[NSURL fileURLWithPath:dest] error:&error];
+  
+    // start
+    NSFileManager *fileManager = [NSFileManager defaultManager];
+    NSURL *destURL = [NSURL fileURLWithPath:dest];
+    if ([fileManager fileExistsAtPath:[destURL path]]) {
+        NSError *removeError = nil;
+        // 如果存在, 则删除该文件/目录
+        [fileManager removeItemAtURL:destURL error:&removeError];
+        if (removeError) {
+            NSLog(@"无法移除文件: %@", [removeError localizedDescription]);
+            callback(@[[removeError localizedDescription], @NO]);
+            return;
+        }
+    }
 
-    if(error == nil)
+    NSError *moveError = nil;
+    NSURL *sourceURL = [NSURL fileURLWithPath:path];
+    [fileManager moveItemAtURL:sourceURL toURL:destURL error:&moveError];
+    if (moveError) {
+        NSLog(@"无法移动文件: %@", [moveError localizedDescription]);
+        callback(@[[moveError localizedDescription], @NO]);
+    }else{
         callback(@[[NSNull null], @YES]);
-    else
-        callback(@[[error localizedDescription], @NO]);
+    }
+    // end
+    
+//    NSError * error = nil;
+//    BOOL result = [[NSFileManager defaultManager] moveItemAtURL:[NSURL fileURLWithPath:path] toURL:[NSURL fileURLWithPath:dest] error:&error];
+//
+//    if(error == nil)
+//        callback(@[[NSNull null], @YES]);
+//    else
+//        callback(@[[error localizedDescription], @NO]);
 
 }
 
