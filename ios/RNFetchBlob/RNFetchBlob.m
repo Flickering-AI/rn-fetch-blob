@@ -488,14 +488,6 @@ RCT_EXPORT_METHOD(mv:(NSString *)path toPath:(NSString *)dest callback:(RCTRespo
         }else{
             NSLog(@"无法替换文件: %@", [replaceError localizedDescription]);
         }
-        // 如果replace失败, 则删除该文件/目录
-        NSError *removeError = nil;
-        [fileManager removeItemAtURL:destURL error:&removeError];
-        if (removeError) {
-            NSLog(@"无法移除文件: %@", [removeError localizedDescription]);
-            callback(@[[removeError localizedDescription], @NO]);
-            return;
-        }
     }
 
     NSError *moveError = nil;
