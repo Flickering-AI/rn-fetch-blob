@@ -479,6 +479,11 @@ RCT_EXPORT_METHOD(mv:(NSString *)path toPath:(NSString *)dest callback:(RCTRespo
     NSFileManager *fileManager = [NSFileManager defaultManager];
     NSURL *destURL = [NSURL fileURLWithPath:dest];
     NSURL *sourceURL = [NSURL fileURLWithPath:path];
+    if (![fileManager fileExistsAtPath:[sourceURL path]]) {
+            NSLog(@"原文件不存在: %@", path);
+            callback(@[[NSString stringWithFormat:@"原文件不存在: %@",path], @NO]);
+            return;
+    }
     if ([fileManager fileExistsAtPath:[destURL path]]) {
         NSError *replaceError = nil;
         [fileManager replaceItemAtURL:destURL withItemAtURL:sourceURL backupItemName:nil options:NSFileManagerItemReplacementUsingNewMetadataOnly resultingItemURL:nil error:&replaceError];
